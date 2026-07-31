@@ -1,17 +1,23 @@
 import admin from "firebase-admin";
+import fs from "fs";
 
-const firebaseKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+const serviceAccountPath = "/etc/secrets/serviceAccountKey.json";
 
-if (!firebaseKey) {
-  throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY is not defined");
+if (!fs.existsSync(serviceAccountPath)) {
+  throw new Error(
+    `Firebase service account file not found: ${serviceAccountPath}`
+  );
 }
 
-const serviceAccount = JSON.parse(firebaseKey);
+const serviceAccount = JSON.parse(
+  fs.readFileSync(serviceAccountPath, "utf8")
+);
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-}
+const app = admin.apps.length
+  ? admin.app()
+  : admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
 
+export { app };
 export default admin;
