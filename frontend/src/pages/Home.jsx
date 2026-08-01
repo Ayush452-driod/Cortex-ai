@@ -22,20 +22,25 @@ function Home() {
   }
 
 
-  const googleLogin = async()=>{
-     try {
+const googleLogin = async () => {
+  try {
+    console.log("Opening Google popup...");
+
     const result = await signInWithPopup(auth, googleProvider);
+    console.log("Popup successful:", result);
 
     const token = await result.user.getIdToken();
-    console.log(token);
+    console.log("Firebase Token:", token);
 
     await handleLogin(token);
-    } catch (error) {
-    console.log("Code:", error.code);
-    console.log("Message:", error.message);
-    console.log("Full Error:", error);
-   }
-}
+    console.log("Backend login successful");
+  } catch (error) {
+    console.error("Firebase Error:", error);
+    console.error("Code:", error.code);
+    console.error("Message:", error.message);
+    console.error("Stack:", error.stack);
+  }
+};
   return (
     <div className='h-screen flex bg-[#0d0f14] text-white overflow-hidden'>
       <SideBar/>
