@@ -49,6 +49,7 @@ export const saveMessage = async(req,res)=>{
       images,
       artifacts
     })
+    await message.save();
     return res.status(200).json(message);
   } catch (error) {
     return res.status(500).json({message : `save message error ${error}`});

@@ -38,34 +38,63 @@ export const createOrder = async(req,res)=>{
     
   }
 }
-export const verifyPayment = async (req,res)=>{
+
+export const verifyPayment = async (req, res) => {
   try {
-    const {razorpay_order_id , razorpay_payment_id , razorpay_signature} = req.body;
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+    } = req.body;
+
+    // Generate signature
     const generatedSignature = crypto
-                               .createHmac("sha256",process.env.RAZORPAY_KEY_SECRET)
-                               .update(`${razorpay_order_id} | ${razorpay_payment_id}`)
-                               .digest("hex")
-    if(generatedSignature !== razorpay_signature){
-      return res.status(400).json({message : "Payment verification failed"})
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`) // <-- FIXED
+      .digest("hex");
+
+    if (generatedSignature !== razorpay_signature) {
+      return res.status(400).json({
+        message: "Payment verification failed",
+      });
     }
 
-    const payment = await Payment.findOne({orderId : razorpay_order_id})
+    const payment = await Payment.findOne({
+      orderId: razorpay_order_id,
+    });
 
-    if(!payment){
-      return res.status(404).json({message : "Payment not found"})
+    if (!payment) {
+      return res.status(404).json({
+        message: "Payment not found",
+      });
     }
 
-    payment.status = "paid"
-    payment.paymentId = razorpay_payment_id
-    await payment.save()
+    payment.status = "paid";
+    payment.paymentId = razorpay_payment_id;
+    await payment.save();
 
-    await axios.post(`${process.env.AUTH_SERVICE}/update-plan`,{userId : payment.userId , plan : payment.plan , credits : payment.credits})
+    console.log("Updating user plan...");
+    console.log("AUTH_SERVICE:", process.env.AUTH_SERVICE);
 
-    return res.status(200).json({message : "Payment verified"})
+    const response = await axios.post(
+      `${process.env.AUTH_SERVICE}/update-plan`,
+      {
+        userId: payment.userId,
+        plan: payment.plan,
+        credits: payment.credits,
+      }
+    );
 
+    console.log("Auth Service Response:", response.data);
 
+    return res.status(200).json({
+      message: "Payment verified successfully",
+    });
   } catch (error) {
-    return res.status(500).json({message : `verify payment error ${error}`})
-    
+    console.error("Verify Payment Error:", error);
+
+    return res.status(500).json({
+      message: error.message,
+    });
   }
-}
+};
