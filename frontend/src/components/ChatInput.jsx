@@ -5,13 +5,14 @@ import {
   ImageIcon,
   MessageSquare,
   Mic,
+  MicOff,
   Paperclip,
   Presentation,
   Send,
   X,
   Zap,
 } from "lucide-react";
-import React, { useRef, useState,useMemo } from "react";
+import React, { useRef, useState,useMemo, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessage } from "../features/sendMessage.js";
 import {
@@ -31,6 +32,8 @@ const ChatInput = () => {
   const [value, setValue] = useState("");
   const [selectedAgent, setSelectedAgent] = useState("Auto");
   const [selectedFile, setSelectedFile] = useState(null);
+  const [listening,setListening] = useState(false);
+  const recognitionRef = useRef(null);
 
   const { selectedConversation } = useSelector(
     (state) => state.conversation
@@ -40,6 +43,43 @@ const ChatInput = () => {
 
   const dispatch = useDispatch();
   const fileRef = useRef(null);
+
+  useEffect(()=>{
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if(!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = true;
+    recognition.continuous = true;
+
+    recognition.onresult= (event)=>{
+      let transcript = ""
+      for(let index = event.resultIndex ; index < event.results.length ; index++){
+        transcript += event.results[index][0].transcript
+      }
+      setValue(transcript)
+    }
+    recognition.oneend = ()=>{
+      setListening(false);
+    }
+
+    recognitionRef.currrent = recognition
+  },[])
+
+  const toggleMic = ()=>{
+    if(!recognitionRef.current){
+      alert("Speech recognition not supported")
+    }
+    if(listening){
+      recognitionRef.current.stop()
+      setListening(false);
+    }else{
+      recognitionRef.current.start()
+      setListening(true);
+    }
+  }
+
 
   const handleSendMessage = async () => {
     if (isLoading) return;
@@ -275,10 +315,12 @@ const ChatInput = () => {
             </button>
 
             <button
-              className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:text-shadow-slate-400 hover:bg-white/5
-              border border-transparent hover:border-white/6 transition-all duration-150 bg-transparent cursor-pointer"
+              onClick={toggleMic}
+              className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-150  cursor-pointer
+              ${listening ? "bg-red-500 text-white" : "text-slate-600 hover:bg-white/5"}`}
             >
-              <Mic size={16} />
+              {listening ? <Mic size={16}/> : <MicOff size={16}/> }
+            
             </button>
           </div>
 
